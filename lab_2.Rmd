@@ -216,8 +216,39 @@ for(i in 1:folds) {
   
   rmse_df <- bind_rows(rmse_df, kfold_rmse_df) # storing our info into our data frame as each row iterates 
   
-  } # Everything within the curly brackets 
+    } # Everything must be within the curly brackets 
 
+
+# Take the average and see which models have the best rmse 
+rmse_df %>% 
+  summarize(mean_rmse_mdl1 = mean(rmse_mdl1), # 289.7196	
+            mean_rmse_mdl2 = mean(rmse_mdl2), # 287.8213
+            mean_rmse_mdl3 = mean(rmse_mdl3)) # 288.5135
+
+# Model 1 is the highest, model 2 is the smallest & model 3 is in the middle 
+# **** Therefore, model 2 has the best predictive ability out of all of the models ****
 
 ```
+
+# Finalize the model!! 
+```{r}
+final_mdl <- lm(f2, data = penguins_clean) 
+```
+
+
+Our final model: 
+
+`r equatiomatic::extract_eq(final_mdl, wrap = TRUE)` 
+
+
+
+And with coefficients: 
+`r equatiomatic::extract_eq(final_mdl, wrap = TRUE, use_coeffs = TRUE)` 
+
+
+
+*(goes into the final model object - extract our equation & display it in a nice equation - without coefficients)*
+
+
+
 

@@ -571,7 +571,45 @@ for(i in 1:folds) {
   
   rmse_df &lt;- bind_rows(rmse_df, kfold_rmse_df) # storing our info into our data frame as each row iterates 
   
-  } # Everything within the curly brackets </code></pre>
+    } # Everything must be within the curly brackets 
+
+
+# Take the average and see which models have the best rmse 
+rmse_df %&gt;% 
+  summarize(mean_rmse_mdl1 = mean(rmse_mdl1), # 289.7196    
+            mean_rmse_mdl2 = mean(rmse_mdl2), # 287.8213
+            mean_rmse_mdl3 = mean(rmse_mdl3)) # 288.5135</code></pre>
+<pre><code>##   mean_rmse_mdl1 mean_rmse_mdl2 mean_rmse_mdl3
+## 1       289.7196       287.8213       288.5135</code></pre>
+<pre class="r"><code># Model 1 is the highest, model 2 is the smallest &amp; model 3 is in the middle 
+# **** Therefore, model 2 has the best predictive ability out of all of the models ****</code></pre>
+</div>
+<div id="finalize-the-model" class="section level1">
+<h1>Finalize the model!!</h1>
+<pre class="r"><code>final_mdl &lt;- lm(f2, data = penguins_clean) </code></pre>
+<p>Our final model:</p>
+<p><span class="math display">\[
+\begin{aligned}
+\operatorname{mass} &amp;= \alpha + \beta_{1}(\operatorname{bill\_l}) +
+\beta_{2}(\operatorname{bill\_d}) + \beta_{3}(\operatorname{flip\_l})\ +
+\\
+&amp;\quad \beta_{4}(\operatorname{species}_{\operatorname{Chinstrap}})
++ \beta_{5}(\operatorname{species}_{\operatorname{Gentoo}}) +
+\beta_{6}(\operatorname{sex}_{\operatorname{male}}) + \epsilon
+\end{aligned}
+\]</span></p>
+<p>And with coefficients: <span class="math display">\[
+\begin{aligned}
+\operatorname{mass} &amp;= \alpha + \beta_{1}(\operatorname{bill\_l}) +
+\beta_{2}(\operatorname{bill\_d}) + \beta_{3}(\operatorname{flip\_l})\ +
+\\
+&amp;\quad \beta_{4}(\operatorname{species}_{\operatorname{Chinstrap}})
++ \beta_{5}(\operatorname{species}_{\operatorname{Gentoo}}) +
+\beta_{6}(\operatorname{sex}_{\operatorname{male}}) + \epsilon
+\end{aligned}
+\]</span></p>
+<p><em>(goes into the final model object - extract our equation &amp;
+display it in a nice equation - without coefficients)</em></p>
 </div>
 
 
