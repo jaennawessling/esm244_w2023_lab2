@@ -1,0 +1,172 @@
+---
+title: "lab_2"
+author: "Jaenna Wessling"
+date: "2023-01-19"
+output: html_document
+---
+
+```{r setup, echo = TRUE, warning = FALSE, message = FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE) #sets the rest of the code chunks as well    
+
+library(tidyverse)
+library(palmerpenguins)
+library(AICcmodavg) # a suite of data sets of different types (penguins, starwars, storms, volcanoes, women)
+library(equatiomatic)
+
+```
+
+# Predicting penguin mass (based on other characteristics)
+```{r}
+penguins_clean <- penguins %>% 
+  drop_na() %>% 
+  rename(mass = body_mass_g,
+         bill_l = bill_length_mm, 
+         bill_d = bill_depth_mm, 
+         flip_l = flipper_length_mm)
+
+
+mdl1 <- lm(mass ~ bill_l + bill_d + flip_l + species + sex + island, data = penguins_clean) # mass as a function of all of these categories 
+
+# summary(mdl1)
+# Residuals - how far away our actual data points are from the estimated model points 
+# Coefficients - estimates --> for every mm of bill length we'll add (18 mm of mass), for each bill_d (add 67 more mass)
+# reference species - Adelie 
+# Adj R^2 - 87% of variance explained 
+
+# AIC(mdl1)
+# 4737.242 (very high AIC! Because we added so many variables/parameters added to the model and penalized & log likelihood calculation)
+```
+
+
+# Using R functions to create more models     
+```{r}
+# formula 1, R recognizes this as a formula  
+f1 <- mass ~ bill_l + bill_d + flip_l + species + sex + island 
+
+mdl1_new <- lm(f1, data = penguins_clean)
+
+
+# Formula 2, saving ourself points on the parameter penalization by removing the island (technically 2 variables for the different island options)
+f2 <- mass ~ bill_l + bill_d + flip_l + species + sex
+
+mdl2 <- lm(f2, data = penguins_clean)
+
+
+# AIC(mdl1, mdl2)
+# mdl1 10 4727.242
+# mdl2  8 4723.938 (can see the model AIC dropped by 4 points by removing the island parameter (not super high though))
+
+
+f3 <- mass ~ bill_d + flip_l + species + sex 
+# Choosing bill length because it's statistically significant (p-value = 0.00075)
+
+mdl3 <- lm(f3, data = penguins_clean)
+
+# AIC(mdl1, mdl2, mdl3)
+#     df      AIC
+# mdl1 10 4727.242
+# mdl2  8 4723.938 # lowest AIC - this is the best 
+# mdl3  7 4728.575 # Highest AIC 
+
+# Trying the BIC too 
+# BIC(mdl1, mdl2, mdl3)
+#      df      BIC
+# mdl1 10 4765.324
+# mdl2  8 4754.403 # lowest BIC - this is the best ***
+# mdl3  7 4755.232 # Highest BIC 
+
+AICcmodavg::AICc(mdl1) # AIC corrected (sometimes not using corrective AIC can be a problem)
+
+aictab(list(mdl1, mdl2, mdl3)) # ranks them in order (best to last)
+
+
+# Model selection based on AIC:
+
+#      K    AICc Delta_AICc AICcWt Cum.Wt       LL
+# Mod2  8 4724.38       0.00   0.79   0.79 -2353.97 (lowest delta AIC)
+# Mod1 10 4727.93       3.54   0.13   0.92 -2353.62
+# Mod3  7 4728.92       4.54   0.08   1.00 -2357.29
+
+
+
+bictab(list(mdl1, mdl2, mdl3)) # Model 2 is technically the best 
+
+
+# Model selection based on BIC:
+
+#      K     BIC Delta_BIC BICWt Cum.Wt       LL
+# Mod2  8 4754.40      0.00   0.6    0.6 -2353.97 (lowest delta BIC)
+# Mod3  7 4755.23      0.83   0.4    1.0 -2357.29
+# Mod1 10 4765.32     10.92   0.0    1.0 -2353.62
+
+
+# ***** Lowest BIC/AIC and delta BIC/AIC are the best ****
+```
+
+
+# Compare models using k-fold corss validation 
+```{r}
+folds <- 10 # 10-fold = break up data into 10 chunks (take one chunk out at a type)
+fold_vec <- rep(1:folds, length.out = nrow(penguins_clean)) # rep() means to repeat the vectors (1:10) using the penguins data
+
+set.seed(42) # want to randomize each vector 
+# all starting at the same starting number - so that this could be exactly replicated, otherwise will get different set of numbers every time you run this 
+# runif(1) #single uniform random number
+
+penguins_fold <- penguins_clean %>% 
+  mutate(group = sample(fold_vec, size = n(), replace = FALSE)) # take set of 330 instances of 1:10, then taking out a chunk each time over the size of n 
+
+
+# Double checking the number of obs in each group 
+# table(penguins_fold$group) 
+# 1  2  3  4  5  6  7  8  9 10 
+# 34 34 34 33 33 33 33 33 33 33 
+
+# all groups are roughly around the same size of data obs 
+
+
+# choosing our first test group - 90% dataset 
+test_df <- penguins_fold %>% 
+  filter(group == 1)
+train_df <- penguins_fold %>% 
+  filter(group != 1)
+```
+
+# Creating our own function
+```{r}
+calc_mean <- function(x) # Going to take some input x 
+  m <- sum(x) / length(x) # add all the values in vector x and dividing by the length of the vector 
+```
+
+# Creating our own rmse function 
+```{r}
+calc_rmse <- function(x, y) {
+  rmse <- (x - y)^2 %>% # squared errors 
+    mean() %>% 
+    sqrt()
+  return(rmse) # return this back to me as the user what the answer is 
+}
+```
+
+
+# Training models
+```{r}
+training_mdl1 <- lm(f1, data = train_df)
+# Based on this smaller set (90%), here is how we would predict the mass of the other data obs in the set
+
+
+training_mdl2 <- lm(f2, data = train_df)
+
+
+training_mdl3 <- lm(f3, data = train_df)
+
+
+# See how well these predict mass values of the data obs that it's never seen before - based on the test subsets (34 obs held aside)
+
+predict_test <- test_df %>% 
+  mutate(model1 = predict(training_mdl1, test_df), 
+         model2 = predict(training_mdl2, test_df,
+         model3 = predict(training_mdl3, test_df)))
+```
+
+
