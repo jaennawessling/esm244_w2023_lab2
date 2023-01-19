@@ -496,14 +496,16 @@ train_df &lt;- penguins_fold %&gt;%
 <pre class="r"><code>calc_mean &lt;- function(x) # Going to take some input x 
   m &lt;- sum(x) / length(x) # add all the values in vector x and dividing by the length of the vector </code></pre>
 </div>
-<div id="creating-our-own-rmse-function" class="section level1">
-<h1>Creating our own rmse function</h1>
+<div id="creating-our-own-rmse-root-mean-square-error-function" class="section level1">
+<h1>Creating our own rmse (root mean square error) function</h1>
 <pre class="r"><code>calc_rmse &lt;- function(x, y) {
-  rmse &lt;- (x - y)^2 %&gt;% # squared errors 
+  rmse &lt;- (x - y)^2 %&gt;% # squared errors - different between the actual mass &amp; the modeled mass, then take the average of them in the column &amp; then square root it 
     mean() %&gt;% 
     sqrt()
   return(rmse) # return this back to me as the user what the answer is 
-}</code></pre>
+}
+
+# Tells you, how bad/far away are the predicted values of each of the models are from the known masses </code></pre>
 </div>
 <div id="training-models" class="section level1">
 <h1>Training models</h1>
@@ -521,8 +523,55 @@ training_mdl3 &lt;- lm(f3, data = train_df)
 
 predict_test &lt;- test_df %&gt;% 
   mutate(model1 = predict(training_mdl1, test_df), 
-         model2 = predict(training_mdl2, test_df,
-         model3 = predict(training_mdl3, test_df)))</code></pre>
+         model2 = predict(training_mdl2, test_df),
+         model3 = predict(training_mdl3, test_df))
+
+
+rmse_predict_test &lt;- predict_test %&gt;% 
+  summarize(rmse_mdl1 = calc_rmse(model1,mass), 
+            rmse_mdl2 = calc_rmse(model2,mass), 
+            rmse_mdl3 = calc_rmse(model3,mass))
+
+# rmse_mdl1 325.9254
+# rmse_mdl2 319.3664
+# rmse_mdl3 327.1562
+
+# Which model predicted the best; which has the lowest rmse? 
+# Looks like model 2 (which agrees with our previous messages)</code></pre>
+</div>
+<div id="lets-iterate" class="section level1">
+<h1>Let’s iterate!!!</h1>
+<pre class="r"><code># How to do what we just did above, but...iteratively (because doing this would be so tedious manually!!)
+
+rmse_df &lt;- data.frame()
+
+# Create a for loop to iterate our process 
+# creates a vector for values 1:10 
+# for each of the values in the vector - starting with the first value we assign it &quot;i&quot; &amp; then do what we need to do to it
+
+for(i in 1:folds) {
+  kfold_test_df &lt;- penguins_fold %&gt;% 
+    filter(group == i) # instead of 1, want i for every iteration of our 1:10 vector
+  kfold_train_df &lt;- penguins_fold %&gt;% # add the df (dataframe) to remind ourselves what type of data set we&#39;re working with
+    filter(group !=i) # all the groups that do not match 
+  
+  kfold_mdl1 &lt;- lm(f1, data = kfold_train_df)
+  kfold_mdl2 &lt;- lm(f2, data = kfold_train_df)
+  kfold_mdl3 &lt;- lm(f3, data = kfold_train_df)
+  
+  kfold_pred_df &lt;- kfold_test_df %&gt;%  # starting with the test df instead of training
+    mutate(mdl1 = predict(kfold_mdl1, kfold_test_df),
+           mdl2 = predict(kfold_mdl2, .), # . is short hand for using the same data frame (kfold_test_df)
+           mdl3 = predict(kfold_mdl3, .)) # use this model to predict the masses from this data frame
+  kfold_rmse_df &lt;- kfold_pred_df %&gt;% 
+    summarize(rmse_mdl1 = calc_rmse(mdl1,mass), 
+            rmse_mdl2 = calc_rmse(mdl2,mass), 
+            rmse_mdl3 = calc_rmse(mdl3,mass), 
+            test_gp = i)
+  
+  rmse_df &lt;- bind_rows(rmse_df, kfold_rmse_df) # storing our info into our data frame as each row iterates 
+  
+  } # Everything within the curly brackets </code></pre>
 </div>
 
 
